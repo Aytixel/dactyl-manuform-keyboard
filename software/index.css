@@ -1,0 +1,42 @@
+search {
+    resize: horizontal;
+}
+
+#keyboard_preview {
+    display: grid;
+}
+
+#keyboard_preview .state {
+    display: flex;
+    grid-column: 1;
+    /* grid-row: 1; */
+    gap: 5em;
+
+    padding-top: 2em;
+}
+
+#keyboard_preview :is(.left, .right) {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 0.5em;
+
+    height: 20em;
+    width: 45em;
+}
+
+#keyboard_preview :is(.left button[data-row="5"]:is([data-col="0"], [data-col="1"]),
+    .right button[data-row="5"]:is([data-col="5"], [data-col="6"])),
+#keyboard_preview :is(.left button[data-col="6"]:is([data-row="3"], [data-row="4"], [data-row="5"]),
+    .right button[data-col="0"]:is([data-row="3"], [data-row="4"], [data-row="5"])) {
+    visibility: hidden;
+}
+
+#keyboard_preview :is(.left, .right) button:is([data-col="2"], [data-col="3"], [data-col="4"]) {
+    transform: translateY(-2em);
+}
+
+#keyboard_preview :is(.left button:is([data-col="5"], [data-col="6"]),
+    .right button:is([data-col="0"], [data-col="1"])) {
+    transform: translateY(-1em);
+}

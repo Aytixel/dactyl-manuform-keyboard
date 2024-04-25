@@ -6,12 +6,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dactyl Manuform Configuration</title>
     <link rel="preload stylesheet" as="style" type="text/css" href="./index.css" />
+    <script src="./keylayout.js" defer></script>
+    <script src="./keylayout_fr_fr.js" defer></script>
     <script src="./index.js" defer></script>
 </head>
 
 <body>
     <button id="get_config">Récupérer la configuration</button>
     <button id="program">Programmer</button>
+    <search>
+        <input id="find_key" type="search" placeholder="Rechercher une touche">
+        <ul id="key_list"></ul>
+    </search>
+    <div id="keyboard_preview">
+        <div class="state">
+            <div class="left"></div>
+            <div class="right"></div>
+        </div>
+        <div class="state">
+            <div class="left"></div>
+            <div class="right"></div>
+        </div>
+    </div>
 </body>
 
 </html>

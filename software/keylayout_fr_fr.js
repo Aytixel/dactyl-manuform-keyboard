@@ -1,0 +1,17 @@
+const keylayout_fr_fr = {
+    AltGraph: 0x86,
+    SuperScript_2: 136 + 0x35,
+    E_Acute: 136 + 0x1f,
+    E_Grave: 136 + 0x24,
+    C_Cedilla: 136 + 0x26,
+    A_Grave: 136 + 0x27,
+    Circumflex: 136 + 0x2f,
+    U_Grave: 136 + 0x34,
+    "²": 136 + 0x35,
+    "é": 136 + 0x1f,
+    "è": 136 + 0x24,
+    "ç": 136 + 0x26,
+    "à": 136 + 0x27,
+    "^": 136 + 0x2f,
+    "ù": 136 + 0x34,
+}
