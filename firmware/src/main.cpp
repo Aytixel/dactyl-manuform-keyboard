@@ -20,15 +20,24 @@
 #define ROW_LEN 6
 #define COL_LEN 7
 
+#define MODE_KEY 0
+#define MODE_GET_KEY_LAYOUT 1
+#define MODE_SET_KEY 2
+
 // variables
 const byte ROW_PIN[ROW_LEN] = {4, 5, 6, 7, 8, 9};
 const byte COL_PIN[COL_LEN] = {A2, A1, A0, 15, 14, 16, 10};
 
 char key_layout[2][2][ROW_LEN][COL_LEN] = {0};
 
+bool last_switch_state[2][2][ROW_LEN][COL_LEN] = {false};
 bool switch_state[2][ROW_LEN][COL_LEN] = {false};
+bool fn_state = false;
+bool last_fn_state = false;
 
 bool check_for_master = true;
+bool is_master = false;
+byte mode = MODE_KEY;
 
 // functions
 void packSwitchState(const bool switch_state[ROW_LEN][COL_LEN])
@@ -47,7 +56,7 @@ void packSwitchState(const bool switch_state[ROW_LEN][COL_LEN])
 void unpackSwitchState(bool switch_state[ROW_LEN][COL_LEN])
 {
     Wire.beginTransmission(I2C_ADDR);
-    Wire.write(0);
+    Wire.write(MODE_KEY);
     Wire.endTransmission();
     Wire.requestFrom(I2C_ADDR, 6);
 
@@ -68,13 +77,34 @@ void request()
     // if there is a request the master has been decided so stop checking for the master
     check_for_master = false;
 
-    const byte command = Wire.read();
-
-    switch (command)
+    switch (mode)
     {
-    case 0:
+    case MODE_KEY:
         packSwitchState(switch_state[KEYBOARD_HALF]);
         break;
+    }
+}
+
+void setKey(const byte buf[2])
+{
+    const byte fn = (buf[0] & 0b10000000) >> 7;
+    const byte side = (buf[0] & 0b01000000) >> 6;
+    const byte row = (buf[0] & 0b00111000) >> 3;
+    const byte col = buf[0] & 0b00000111;
+
+    key_layout[fn][side][row][col] = buf[1];
+    EEPROM.update(col + (COL_LEN * row) + (COL_LEN * ROW_LEN * side) + (COL_LEN * ROW_LEN * 2 * fn), buf[1]);
+}
+
+void receive(int length)
+{
+    mode = Wire.read();
+
+    if (mode == MODE_SET_KEY && length == 3)
+    {
+        const byte buf[2] = {(unsigned char)Wire.read(), (unsigned char)Wire.read()};
+
+        setKey(buf);
     }
 }
 
@@ -94,12 +124,10 @@ void checkSwitchState(bool switch_state[ROW_LEN][COL_LEN])
 // program
 void setup()
 {
-    // initialize key layout from EEPROM
-    EEPROM.get(0, key_layout);
-
     // the two sides starts as slaves
     Wire.begin(I2C_ADDR);
     Wire.onRequest(request);
+    Wire.onReceive(receive);
 
     // initialize switch pin mode
     for (byte i = 0; i < ROW_LEN; i++)
@@ -112,10 +140,8 @@ void setup()
         pinMode(COL_PIN[i], INPUT_PULLUP);
 }
 
-void emulate(const bool fn_state, const bool switch_state[ROW_LEN][COL_LEN], bool last_switch_state[ROW_LEN][COL_LEN], const char key_layout[ROW_LEN][COL_LEN])
+void emulate(const bool switch_state[ROW_LEN][COL_LEN], bool last_switch_state[ROW_LEN][COL_LEN], const char key_layout[ROW_LEN][COL_LEN])
 {
-    static bool last_fn_state = false;
-
     for (byte row = 0; row < ROW_LEN; row++)
     {
         for (byte col = 0; col < COL_LEN; col++)
@@ -142,19 +168,23 @@ void emulate(const bool fn_state, const bool switch_state[ROW_LEN][COL_LEN], boo
 
 void loop()
 {
-    static bool last_switch_state[2][2][ROW_LEN][COL_LEN] = {false};
-    static bool fn_state = false;
-    static bool is_master = false;
-
     // check for a usb connection if true become the master
     if (check_for_master && (UDADDR & _BV(ADDEN)))
     {
         is_master = true;
         check_for_master = false;
 
+        // initialize key layout from EEPROM
+        EEPROM.get(0, key_layout);
+
+        // enable serial communication
+        Serial.begin(115200);
+
+        // switch I2C connection from slave to master
         Wire.end();
         Wire.begin();
 
+        // enable keyboard output
         Keyboard.begin(KeyboardLayout_fr_FR);
         Keyboard.releaseAll();
     }
@@ -167,9 +197,29 @@ void loop()
 
         fn_state = switch_state[FN_KEYBOARD_HALF][FN_ROW][FN_COL];
 
-        emulate(fn_state, switch_state[LEFT], last_switch_state[fn_state][LEFT], key_layout[fn_state][LEFT]);
-        emulate(fn_state, switch_state[RIGHT], last_switch_state[fn_state][RIGHT], key_layout[fn_state][RIGHT]);
+        emulate(switch_state[LEFT], last_switch_state[fn_state][LEFT], key_layout[fn_state][LEFT]);
+        emulate(switch_state[RIGHT], last_switch_state[fn_state][RIGHT], key_layout[fn_state][RIGHT]);
 
         memcpy(last_switch_state[fn_state], switch_state, sizeof(switch_state));
+
+        if (Serial.available())
+        {
+            switch (Serial.read())
+            {
+            case MODE_GET_KEY_LAYOUT:
+                Serial.write((char *)key_layout, sizeof(key_layout));
+                break;
+            case MODE_SET_KEY:
+                const byte buf[2] = {(unsigned char)Serial.read(), (unsigned char)Serial.read()};
+
+                setKey(buf);
+
+                Wire.beginTransmission(I2C_ADDR);
+                Wire.write(MODE_SET_KEY);
+                Wire.write(buf, sizeof(buf));
+                Wire.endTransmission();
+                break;
+            }
+        }
     }
 }
