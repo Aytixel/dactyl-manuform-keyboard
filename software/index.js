@@ -35,7 +35,7 @@ updateKeyList()
 find_key_search_bar.addEventListener("input", updateKeyList)
 
 async function openPortThen(callback) {
-    const filters = [{ usbVendorId: 0x2341, usbProductId: 0x8037 }]
+    const filters = [{ usbVendorId: 0x2341, usbProductId: 0x8036 }]
     const port = await navigator.serial.requestPort({ filters })
 
     await port.open({ baudRate: 115200 })
