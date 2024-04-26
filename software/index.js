@@ -74,6 +74,49 @@ function indexToIndexes(i) {
     }
 }
 
+for (let i = 0; i < 168; i++) {
+    const { fn, side, row, col } = indexToIndexes(i)
+    const key_preview = document.createElement("button")
+
+    function setConfigKey(fn, side, row, col, name, code) {
+        if (code == FN_KEY) {
+            key_preview_layout[1 - fn][side][row][col].textContent = name
+            key_preview_layout[1 - fn][side][row][col].dataset.code = code
+            new_key_layout[1 - fn][side][row][col] = code
+        }
+        else if (new_key_layout[fn][side][row][col] == FN_KEY) {
+            key_preview_layout[1 - fn][side][row][col].textContent = ""
+            key_preview_layout[1 - fn][side][row][col].dataset.code = 0
+            new_key_layout[1 - fn][side][row][col] = 0
+        }
+
+        key_preview.textContent = name
+        key_preview.dataset.code = code
+        new_key_layout[fn][side][row][col] = code
+    }
+
+    key_preview.addEventListener("dblclick", () => setConfigKey(fn, side, row, col, "", 0))
+    key_preview.addEventListener("click", () => setConfigKey(fn, side, row, col, selected_key.name, selected_key.code))
+
+    key_preview.textContent = ""
+    key_preview.dataset.code = 0
+    key_preview.dataset.fn = fn
+    key_preview.dataset.side = side
+    key_preview.dataset.row = row
+    key_preview.dataset.col = col
+
+    keyboard_preview_children[fn][side].append(key_preview_layout[fn][side][row][col] = key_preview)
+}
+
+function updateKeyboardPreview() {
+    for (let i = 0; i < 168; i++) {
+        const { fn, side, row, col } = indexToIndexes(i)
+
+        key_preview_layout[fn][side][row][col].dataset.code = new_key_layout[fn][side][row][col]
+        key_preview_layout[fn][side][row][col].textContent = getKeyNameFromCode(new_key_layout[fn][side][row][col])
+    }
+}
+
 get_config_button.addEventListener("click", () => openPortThen(async ({ writer, reader }) => {
     await writer.write(new Uint8Array([3]))
 
@@ -88,63 +131,21 @@ get_config_button.addEventListener("click", () => openPortThen(async ({ writer, 
 
     buffer = new Uint8Array((await reader.read(new Uint8Array(168))).value.buffer)
 
-    for (let fn = 0; fn < 2; fn++)
-        for (let side = 0; side < 2; side++)
-            keyboard_preview_children[fn][side].innerHTML = ""
-
     for (const i in buffer) {
         const { fn, side, row, col } = indexToIndexes(i)
-        const keyboard_preview_side = keyboard_preview_children[fn][side]
-        const key_preview = document.createElement("button")
-
-        function setConfigKey(fn, side, row, col, name, code) {
-            if (code == FN_KEY) {
-                key_preview_layout[1 - fn][side][row][col].textContent = name
-                key_preview_layout[1 - fn][side][row][col].dataset.code = code
-                new_key_layout[1 - fn][side][row][col] = code
-            }
-            else if (new_key_layout[fn][side][row][col] == FN_KEY) {
-                key_preview_layout[1 - fn][side][row][col].textContent = ""
-                key_preview_layout[1 - fn][side][row][col].dataset.code = 0
-                new_key_layout[1 - fn][side][row][col] = 0
-            }
-
-            key_preview.textContent = name
-            key_preview.dataset.code = code
-            new_key_layout[fn][side][row][col] = code
-        }
-
-        key_preview.addEventListener("dblclick", () => setConfigKey(fn, side, row, col, "", 0))
-        key_preview.addEventListener("click", () => setConfigKey(fn, side, row, col, selected_key.name, selected_key.code))
-
-        key_preview.dataset.fn = fn
-        key_preview.dataset.side = side
-        key_preview.dataset.row = row
-        key_preview.dataset.col = col
 
         if ((side == fn_side && row == fn_row && col == fn_col) || new_key_layout[fn][side][row][col] == FN_KEY) {
             old_key_layout[0][side][row][col] = FN_KEY
             old_key_layout[1][side][row][col] = FN_KEY
             new_key_layout[0][side][row][col] = FN_KEY
             new_key_layout[1][side][row][col] = FN_KEY
-
-            if (key_preview_layout[1 - fn][side][row][col]) {
-                key_preview_layout[1 - fn][side][row][col].dataset.code = FN_KEY
-                key_preview_layout[1 - fn][side][row][col].textContent = "Fn"
-            }
-
-            key_preview.dataset.code = FN_KEY
-            key_preview.textContent = "Fn"
         } else {
             old_key_layout[fn][side][row][col] = buffer[i]
             new_key_layout[fn][side][row][col] = buffer[i]
-            key_preview.dataset.code = buffer[i]
-            key_preview.textContent = getKeyNameFromCode(buffer[i])
         }
-
-        key_preview_layout[fn][side][row][col] = key_preview
-        keyboard_preview_side.append(key_preview)
     }
+
+    updateKeyboardPreview()
 }))
 
 program_button.addEventListener("click", () => openPortThen(async ({ writer }) => {
