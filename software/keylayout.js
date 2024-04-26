@@ -1,5 +1,8 @@
+const FN_KEY = -1
+
 function getKeyLayout(local_keylayout) {
     const keylayout = {
+        Fn: FN_KEY,
         Backspace: 0xB2,
         Tab: 0xB3,
         Enter: 0xB0,
