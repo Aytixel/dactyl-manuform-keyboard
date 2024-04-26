@@ -10,10 +10,6 @@
 #define LEFT 0
 #define RIGHT 1
 
-#define FN_ROW 4
-#define FN_COL 6
-#define FN_KEYBOARD_HALF RIGHT
-
 #define KEY_ALT KEY_LEFT_ALT
 #define KEY_ALTGR KEY_RIGHT_ALT
 
@@ -23,12 +19,17 @@
 #define MODE_KEY 0
 #define MODE_GET_KEY_LAYOUT 1
 #define MODE_SET_KEY 2
+#define MODE_GET_FN_KEY 3
+#define MODE_SET_FN_KEY 4
 
 // variables
 const byte ROW_PIN[ROW_LEN] = {4, 5, 6, 7, 8, 9};
 const byte COL_PIN[COL_LEN] = {A2, A1, A0, 15, 14, 16, 10};
 
 char key_layout[2][2][ROW_LEN][COL_LEN] = {0};
+byte fn_keyboard_half = 0;
+byte fn_row = 0;
+byte fn_col = 0;
 
 bool last_switch_state[2][2][ROW_LEN][COL_LEN] = {false};
 bool switch_state[2][ROW_LEN][COL_LEN] = {false};
@@ -96,6 +97,15 @@ void setKey(const byte buf[2])
     EEPROM.update(col + (COL_LEN * row) + (COL_LEN * ROW_LEN * side) + (COL_LEN * ROW_LEN * 2 * fn), buf[1]);
 }
 
+void setFnKey(const byte buf)
+{
+    fn_keyboard_half = (buf & 0b01000000) >> 6;
+    fn_row = (buf & 0b00111000) >> 3;
+    fn_col = buf & 0b00000111;
+
+    EEPROM.update(168, buf);
+}
+
 void receive(int length)
 {
     mode = Wire.read();
@@ -105,6 +115,11 @@ void receive(int length)
         const byte buf[2] = {(unsigned char)Wire.read(), (unsigned char)Wire.read()};
 
         setKey(buf);
+    }
+
+    if (mode == MODE_SET_FN_KEY && length == 2)
+    {
+        setFnKey(Wire.read());
     }
 }
 
@@ -176,6 +191,9 @@ void loop()
 
         // initialize key layout from EEPROM
         EEPROM.get(0, key_layout);
+        fn_keyboard_half = (EEPROM[168] & 0b01000000) >> 6;
+        fn_row = (EEPROM[168] & 0b00111000) >> 3;
+        fn_col = EEPROM[168] & 0b00000111;
 
         // enable serial communication
         Serial.begin(115200);
@@ -195,7 +213,7 @@ void loop()
     {
         unpackSwitchState(switch_state[!KEYBOARD_HALF]);
 
-        fn_state = switch_state[FN_KEYBOARD_HALF][FN_ROW][FN_COL];
+        fn_state = switch_state[1][4][6];
 
         emulate(switch_state[LEFT], last_switch_state[fn_state][LEFT], key_layout[fn_state][LEFT]);
         emulate(switch_state[RIGHT], last_switch_state[fn_state][RIGHT], key_layout[fn_state][RIGHT]);
@@ -210,7 +228,8 @@ void loop()
                 Serial.write((char *)key_layout, sizeof(key_layout));
                 break;
             case MODE_SET_KEY:
-                const byte buf[2] = {(unsigned char)Serial.read(), (unsigned char)Serial.read()};
+            {
+                const byte buf[2] = {(byte)Serial.read(), (byte)Serial.read()};
 
                 setKey(buf);
 
@@ -219,6 +238,22 @@ void loop()
                 Wire.write(buf, sizeof(buf));
                 Wire.endTransmission();
                 break;
+            }
+            case MODE_GET_FN_KEY:
+                Serial.write(EEPROM[168]);
+                break;
+            case MODE_SET_FN_KEY:
+            {
+                const byte buf = Serial.read();
+
+                setFnKey(buf);
+
+                Wire.beginTransmission(I2C_ADDR);
+                Wire.write(MODE_SET_FN_KEY);
+                Wire.write(buf);
+                Wire.endTransmission();
+                break;
+            }
             }
         }
     }
