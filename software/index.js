@@ -156,7 +156,7 @@ program_button.addEventListener("click", () => openPortThen(async ({ writer }) =
             if (new_key_layout[fn][side][row][col] == FN_KEY)
                 await writer.write(new Uint8Array([4, ((side & 0b00000001) << 6) + ((row & 0b00000111) << 3) + (col & 0b00000111)]))
             else
-                await writer.write(new Uint8Array([2, ((fn & 0b00000001) << 7) + ((side & 0b00000001) << 6) + ((row & 0b00000111) << 3) + (col & 0b00000111), code]))
+                await writer.write(new Uint8Array([2, ((fn & 0b00000001) << 7) + ((side & 0b00000001) << 6) + ((row & 0b00000111) << 3) + (col & 0b00000111), new_key_layout[fn][side][row][col]]))
 
             old_key_layout[fn][side][row][col] = new_key_layout[fn][side][row][col]
         }
