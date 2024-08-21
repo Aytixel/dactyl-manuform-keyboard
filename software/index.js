@@ -57,6 +57,8 @@ function generateConfigKeyLayout() {
 
 const get_config_button = document.getElementById("get_config")
 const program_button = document.getElementById("program")
+const download_button = document.getElementById("download")
+const upload_file = document.getElementById("upload")
 const keyboard_preview = document.getElementById("keyboard_preview")
 const keyboard_preview_children = [...keyboard_preview.children].map(e => e.children)
 const old_key_layout = generateConfigKeyLayout()
@@ -168,3 +170,30 @@ program_button.addEventListener("click", () => openPortThen(async ({ writer }) =
 
     program_button.children[0].value = 0
 }))
+
+download_button.addEventListener("click", () => {
+    const link = document.createElement("a")
+
+    link.setAttribute("href", "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(new_key_layout)))
+    link.setAttribute("download", "keyboard-config.json")
+
+    link.style.display = "none"
+
+    document.body.appendChild(link)
+
+    link.click()
+
+    document.body.removeChild(link)
+})
+
+upload_file.addEventListener("change", async () => {
+    const loaded_key_layout = JSON.parse(await upload_file.files[0].text())
+
+    for (let i = 0; i < 168; i++) {
+        const { fn, side, row, col } = indexToIndexes(i)
+
+        old_key_layout[fn][side][row][col] = new_key_layout[fn][side][row][col] = loaded_key_layout[fn][side][row][col]
+    }
+
+    updateKeyboardPreview()
+})
