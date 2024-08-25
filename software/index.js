@@ -192,7 +192,7 @@ upload_file.addEventListener("change", async () => {
     for (let i = 0; i < 168; i++) {
         const { fn, side, row, col } = indexToIndexes(i)
 
-        old_key_layout[fn][side][row][col] = new_key_layout[fn][side][row][col] = loaded_key_layout[fn][side][row][col]
+        new_key_layout[fn][side][row][col] = loaded_key_layout[fn][side][row][col]
     }
 
     updateKeyboardPreview()
