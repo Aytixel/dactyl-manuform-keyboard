@@ -10,9 +10,6 @@
 #define LEFT 0
 #define RIGHT 1
 
-#define KEY_ALT KEY_LEFT_ALT
-#define KEY_ALTGR KEY_RIGHT_ALT
-
 #define ROW_LEN 6
 #define COL_LEN 7
 
