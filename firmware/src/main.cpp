@@ -1,7 +1,8 @@
+#define HID_CUSTOM_LAYOUT
+#define LAYOUT_FRENCH
+
 #include <Arduino.h>
-#include <KeyboardLayout.h>
-#include <Keyboard_fr_FR.h>
-#include <Keyboard.h>
+#include <HID-Project.h>
 #include <EEPROM.h>
 #include <Wire.h>
 
@@ -179,7 +180,7 @@ void loop()
         Wire.begin();
 
         // enable keyboard output
-        Keyboard.begin(KeyboardLayout_fr_FR);
+        Keyboard.begin();
         Keyboard.releaseAll();
     }
 
