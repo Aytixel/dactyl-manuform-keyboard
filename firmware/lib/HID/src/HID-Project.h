@@ -36,14 +36,6 @@ THE SOFTWARE.
 #endif
 
 // Include all HID libraries (.a linkage required to work) properly
-#include "SingleReport/SingleConsumer.h"
-#include "MultiReport/Consumer.h"
-#include "SingleReport/SingleSystem.h"
-#include "MultiReport/System.h"
 #include "SingleReport/RawHID.h"
-#include "SingleReport/BootKeyboard.h"
-#include "MultiReport/ImprovedKeyboard.h"
 #include "SingleReport/SingleNKROKeyboard.h"
 #include "MultiReport/NKROKeyboard.h"
-
-// Include Teensy HID afterwards to overwrite key definitions if used

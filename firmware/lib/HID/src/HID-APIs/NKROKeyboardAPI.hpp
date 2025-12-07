@@ -25,55 +25,38 @@ THE SOFTWARE.
 #pragma once
 
 
-size_t NKROKeyboardAPI::set(KeyboardKeycode k, bool s) 
+size_t NKROKeyboardAPI::set(uint16_t k, bool s) 
 {
-	// Press keymap key
-	if (k < NKRO_KEY_COUNT){
-		uint8_t bit = 1 << (uint8_t(k) % 8);
-		if(s){
-			_keyReport.keys[k / 8] |= bit;
+	// Press key
+	if (k & 0x00FF){
+		uint8_t key = k;
+		// Invalid scancode with 104 nkro
+		if ((key > 0x65 && 0xE0 > key) || key > 0xE7) {
+			return 0;
 		}
-		else{
-			_keyReport.keys[k / 8] &= ~bit;
+		// Skip gap in scancode with 104 nkro
+		if (key > 0x65) {
+			key -= 0x7A;
 		}
-		return 1;
+		uint8_t bit = 1 << (uint8_t(key) % 8);
+		if (s) {
+			_keyReport.keys[key / 8] |= bit;
+		} else {
+			_keyReport.keys[key / 8] &= ~bit;
+		}
 	}
 
-	// It's a modifier key
-	else if(k >= KEY_LEFT_CTRL && k <= KEY_RIGHT_GUI)
-	{
-		// Convert key into bitfield (0 - 7)
-		k = KeyboardKeycode(uint8_t(k) - uint8_t(KEY_LEFT_CTRL));
-		if(s){
-			_keyReport.modifiers |= (1 << k);
-		}
-		else{
-			_keyReport.modifiers &= ~(1 << k);
-		}
-		return 1;
-	}
-	
-	// Its a custom key (outside our keymap)
-	else{
-		// Add k to the key report only if it's not already present
-		// and if there is an empty slot. Remove the first available key.
-		auto key = _keyReport.key;
-		
-		// Is key already in the list or did we found an empty slot?
-		if (s && (key == uint8_t(k) || key == KEY_RESERVED)) {
-			_keyReport.key = k;
-			return 1;
-		}
-		
-		// Test the key report to see if k is present. Clear it if it exists.
-		if (!s && (key == k)) {
-			_keyReport.key = KEY_RESERVED;
-			return 1;
+	// Press modifier
+	if (k & 0xFF00) {
+		uint8_t modifier = k >> 8;
+		if (s) {
+			_keyReport.modifiers |= modifier;
+		} else {
+			_keyReport.modifiers &= ~modifier;
 		}
 	}
 	
-	// No empty/pressed key was found
-	return 0;
+	return 1;
 }
 
 size_t NKROKeyboardAPI::removeAll(void)
@@ -85,12 +68,11 @@ size_t NKROKeyboardAPI::removeAll(void)
 		// Is a key in the list or did we found an empty slot?
 		auto bits = _keyReport.allkeys[i];
 		do {
-			if(bits & 0x01){
+			if (bits & 0x01) {
 				ret++;
 			}
 			bits >>=1;
-		}
-		while(bits);
+		} while(bits);
 		_keyReport.allkeys[i] = 0x00;
 	}
 	return ret;

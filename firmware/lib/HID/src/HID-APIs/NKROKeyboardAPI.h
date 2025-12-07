@@ -57,7 +57,7 @@ protected:
   HID_NKROKeyboardReport_Data_t _keyReport;
 
 private:
-  inline virtual size_t set(KeyboardKeycode k, bool s) override;
+  inline virtual size_t set(uint16_t k, bool s) override;
 };
 
 // Implementation is inline

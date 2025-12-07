@@ -1,6 +1,3 @@
-#define HID_CUSTOM_LAYOUT
-#define LAYOUT_FRENCH
-
 #include <Arduino.h>
 #include <HID-Project.h>
 #include <EEPROM.h>
@@ -11,37 +8,42 @@
 #define LEFT 0
 #define RIGHT 1
 
-#define LAYER_LEN 2
+#define LAYER_COUNT 5
+#define SIDE_COUNT 2
 #define ROW_LEN 6
 #define COL_LEN 7
+
+#define SIDE_LEN ROW_LEN * COL_LEN
+#define LAYER_LEN SIDE_LEN * SIDE_COUNT
+#define ALL_LAYER_LEN LAYER_LEN * LAYER_COUNT
 
 #define METHOD_GET_KEY_STATE 0
 #define METHOD_GET_KEY_LAYOUT 1
 #define METHOD_SET_KEY 2
 
 // variables
-const byte ROW_PIN[ROW_LEN] = {4, 5, 6, 7, 8, 9};
-const byte COL_PIN[COL_LEN] = {A2, A1, A0, 15, 14, 16, 10};
+const uint8_t ROW_PIN[ROW_LEN] = {4, 5, 6, 7, 8, 9};
+const uint8_t COL_PIN[COL_LEN] = {A2, A1, A0, 15, 14, 16, 10};
 
-char key_layout[LAYER_LEN][2][ROW_LEN][COL_LEN] = {0};
+uint16_t key_layout[LAYER_COUNT][SIDE_COUNT][ROW_LEN][COL_LEN] = {0};
 
-bool last_switch_state[LAYER_LEN][2][ROW_LEN][COL_LEN] = {false};
-bool switch_state[2][ROW_LEN][COL_LEN] = {false};
+bool last_switch_state[LAYER_COUNT][SIDE_COUNT][ROW_LEN][COL_LEN] = {false};
+bool switch_state[SIDE_COUNT][ROW_LEN][COL_LEN] = {false};
 bool fn_state = false;
 bool last_fn_state = false;
 
 bool check_for_master = true;
 bool is_master = false;
-byte method = METHOD_GET_KEY_STATE;
+uint8_t method = METHOD_GET_KEY_STATE;
 
 // functions
 void packSwitchState(const bool switch_state[ROW_LEN][COL_LEN])
 {
-    for (byte row = 0; row < ROW_LEN; row++)
+    for (uint8_t row = 0; row < ROW_LEN; row++)
     {
-        byte buf = 0;
+        uint8_t buf = 0;
 
-        for (byte col = 0; col < COL_LEN; col++)
+        for (uint8_t col = 0; col < COL_LEN; col++)
             buf += switch_state[row][col] << col;
 
         Wire.write(buf);
@@ -55,15 +57,12 @@ void unpackSwitchState(bool switch_state[ROW_LEN][COL_LEN])
     Wire.endTransmission();
     Wire.requestFrom(I2C_ADDR, 6);
 
-    for (byte row = 0; row < ROW_LEN; row++)
+    for (uint8_t row = 0; row < ROW_LEN; row++)
     {
-        byte buf = Wire.read();
+        uint8_t buf = Wire.read();
 
-        for (byte col = 0; col < COL_LEN; col++)
-        {
-            switch_state[row][col] = buf & 1;
-            buf >>= 1;
-        }
+        for (uint8_t col = 0; col < COL_LEN; col++)
+            switch_state[row][col] = (buf >> col) & 0b00000001;
     }
 }
 
@@ -80,24 +79,37 @@ void request()
     }
 }
 
-void setKey(const byte buf[2])
+void setKey(const uint8_t buf[4])
 {
-    const byte layer = (buf[0] & 0b10000000) >> 7;
-    const byte side = (buf[0] & 0b01000000) >> 6;
-    const byte row = (buf[0] & 0b00111000) >> 3;
-    const byte col = buf[0] & 0b00000111;
+    const uint8_t layer = buf[0] & 0b00000111;
+    const uint8_t side = (buf[1] & 0b01000000) >> 6;
+    const uint8_t row = (buf[1] & 0b00111000) >> 3;
+    const uint8_t col = buf[1] & 0b00000111;
 
-    key_layout[layer][side][row][col] = buf[1];
-    EEPROM.update(col + (COL_LEN * row) + (COL_LEN * ROW_LEN * (side + 2 * layer)), buf[1]);
+    key_layout[layer][side][row][col] = ((uint16_t)buf[2] << 8) + buf[3];
+    EEPROM.update(
+        (
+            (uint16_t)col +
+            (COL_LEN * (uint16_t)row) +
+            (SIDE_LEN * ((uint16_t)side + 2 * (uint16_t)layer))
+        ) * sizeof(uint16_t),
+        ((uint16_t)buf[2] << 8) + (uint16_t)buf[3]
+    );
 }
 
 void receive(int length)
 {
     method = Wire.read();
+    length -= 1;
 
-    if (method == METHOD_SET_KEY && length == 3)
+    if (method == METHOD_SET_KEY && length == 4)
     {
-        const byte buf[2] = {(byte)Wire.read(), (byte)Wire.read()};
+        const uint8_t buf[4] = {
+            (uint8_t)Wire.read(),
+            (uint8_t)Wire.read(),
+            (uint8_t)Wire.read(),
+            (uint8_t)Wire.read()
+        };
 
         setKey(buf);
     }
@@ -105,11 +117,11 @@ void receive(int length)
 
 void checkSwitchState(bool switch_state[ROW_LEN][COL_LEN])
 {
-    for (byte row = 0; row < ROW_LEN; row++)
+    for (uint8_t row = 0; row < ROW_LEN; row++)
     {
         digitalWrite(ROW_PIN[row], LOW);
 
-        for (byte col = 0; col < COL_LEN; col++)
+        for (uint8_t col = 0; col < COL_LEN; col++)
             switch_state[row][col] = !digitalRead(COL_PIN[col]);
 
         digitalWrite(ROW_PIN[row], HIGH);
@@ -125,23 +137,30 @@ void setup()
     Wire.onReceive(receive);
 
     // initialize switch pin method
-    for (byte i = 0; i < ROW_LEN; i++)
+    for (uint8_t i = 0; i < ROW_LEN; i++)
     {
         pinMode(ROW_PIN[i], OUTPUT);
         digitalWrite(ROW_PIN[i], HIGH);
     }
 
-    for (byte i = 0; i < COL_LEN; i++)
+    for (uint8_t i = 0; i < COL_LEN; i++)
         pinMode(COL_PIN[i], INPUT_PULLUP);
 }
 
-void emulate(const bool switch_state[ROW_LEN][COL_LEN], bool last_switch_state[ROW_LEN][COL_LEN], const char key_layout[ROW_LEN][COL_LEN])
+void emulate(
+    const bool switch_state[ROW_LEN][COL_LEN],
+    bool last_switch_state[ROW_LEN][COL_LEN],
+    const uint16_t key_layout[ROW_LEN][COL_LEN]
+)
 {
-    for (byte row = 0; row < ROW_LEN; row++)
+    for (uint8_t row = 0; row < ROW_LEN; row++)
     {
-        for (byte col = 0; col < COL_LEN; col++)
+        for (uint8_t col = 0; col < COL_LEN; col++)
         {
-            if (switch_state[row][col] != last_switch_state[row][col] && key_layout[row][col])
+            if (
+                switch_state[row][col] != last_switch_state[row][col] &&
+                key_layout[row][col]
+            )
             {
                 if (switch_state[row][col])
                     NKROKeyboard.press(key_layout[row][col]);
@@ -152,7 +171,11 @@ void emulate(const bool switch_state[ROW_LEN][COL_LEN], bool last_switch_state[R
                 {
                     NKROKeyboard.releaseAll();
 
-                    memset(last_switch_state[last_fn_state], 0, sizeof(last_switch_state[last_fn_state]));
+                    memset(
+                        last_switch_state[last_fn_state],
+                        0,
+                        sizeof(last_switch_state[last_fn_state])
+                    );
 
                     last_fn_state = fn_state;
                 }
@@ -192,8 +215,16 @@ void loop()
 
         fn_state = switch_state[1][4][6];
 
-        emulate(switch_state[LEFT], last_switch_state[fn_state][LEFT], key_layout[fn_state][LEFT]);
-        emulate(switch_state[RIGHT], last_switch_state[fn_state][RIGHT], key_layout[fn_state][RIGHT]);
+        emulate(
+            switch_state[LEFT],
+            last_switch_state[fn_state][LEFT],
+            key_layout[fn_state][LEFT]
+        );
+        emulate(
+            switch_state[RIGHT],
+            last_switch_state[fn_state][RIGHT],
+            key_layout[fn_state][RIGHT]
+        );
 
         memcpy(last_switch_state[fn_state], switch_state, sizeof(switch_state));
 
@@ -206,7 +237,12 @@ void loop()
                 break;
             case METHOD_SET_KEY:
             {
-                const byte buf[2] = {(byte)Serial.read(), (byte)Serial.read()};
+                const uint8_t buf[4] = {
+                    (uint8_t)Serial.read(),
+                    (uint8_t)Serial.read(),
+                    (uint8_t)Serial.read(),
+                    (uint8_t)Serial.read()
+                };
 
                 setKey(buf);
 
