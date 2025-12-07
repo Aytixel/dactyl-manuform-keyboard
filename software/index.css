@@ -95,7 +95,7 @@ main {
     gap: 5em;
 }
 
-#keyboard_preview:not(.fn_state) .state:first-child {
+#keyboard_preview:not(.layer_state) .state:first-child {
     z-index: 1;
 }
 
