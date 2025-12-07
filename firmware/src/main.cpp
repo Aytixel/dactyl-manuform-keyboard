@@ -144,13 +144,13 @@ void emulate(const bool switch_state[ROW_LEN][COL_LEN], bool last_switch_state[R
             if (switch_state[row][col] != last_switch_state[row][col] && key_layout[row][col])
             {
                 if (switch_state[row][col])
-                    Keyboard.press(key_layout[row][col]);
+                    NKROKeyboard.press(key_layout[row][col]);
                 else
-                    Keyboard.release(key_layout[row][col]);
+                    NKROKeyboard.release(key_layout[row][col]);
 
                 if (last_fn_state != fn_state)
                 {
-                    Keyboard.releaseAll();
+                    NKROKeyboard.releaseAll();
 
                     memset(last_switch_state[last_fn_state], 0, sizeof(last_switch_state[last_fn_state]));
 
@@ -180,8 +180,8 @@ void loop()
         Wire.begin();
 
         // enable keyboard output
-        Keyboard.begin();
-        Keyboard.releaseAll();
+        NKROKeyboard.begin();
+        NKROKeyboard.releaseAll();
     }
 
     checkSwitchState(switch_state[KEYBOARD_HALF]);
