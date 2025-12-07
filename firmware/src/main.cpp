@@ -10,32 +10,28 @@
 #define LEFT 0
 #define RIGHT 1
 
+#define LAYER_LEN 2
 #define ROW_LEN 6
 #define COL_LEN 7
 
-#define MODE_KEY 0
-#define MODE_GET_KEY_LAYOUT 1
-#define MODE_SET_KEY 2
-#define MODE_GET_FN_KEY 3
-#define MODE_SET_FN_KEY 4
+#define METHOD_GET_KEY_STATE 0
+#define METHOD_GET_KEY_LAYOUT 1
+#define METHOD_SET_KEY 2
 
 // variables
 const byte ROW_PIN[ROW_LEN] = {4, 5, 6, 7, 8, 9};
 const byte COL_PIN[COL_LEN] = {A2, A1, A0, 15, 14, 16, 10};
 
-char key_layout[2][2][ROW_LEN][COL_LEN] = {0};
-byte fn_keyboard_half = 0;
-byte fn_row = 0;
-byte fn_col = 0;
+char key_layout[LAYER_LEN][2][ROW_LEN][COL_LEN] = {0};
 
-bool last_switch_state[2][2][ROW_LEN][COL_LEN] = {false};
+bool last_switch_state[LAYER_LEN][2][ROW_LEN][COL_LEN] = {false};
 bool switch_state[2][ROW_LEN][COL_LEN] = {false};
 bool fn_state = false;
 bool last_fn_state = false;
 
 bool check_for_master = true;
 bool is_master = false;
-byte mode = MODE_KEY;
+byte method = METHOD_GET_KEY_STATE;
 
 // functions
 void packSwitchState(const bool switch_state[ROW_LEN][COL_LEN])
@@ -54,7 +50,7 @@ void packSwitchState(const bool switch_state[ROW_LEN][COL_LEN])
 void unpackSwitchState(bool switch_state[ROW_LEN][COL_LEN])
 {
     Wire.beginTransmission(I2C_ADDR);
-    Wire.write(MODE_KEY);
+    Wire.write(METHOD_GET_KEY_STATE);
     Wire.endTransmission();
     Wire.requestFrom(I2C_ADDR, 6);
 
@@ -75,9 +71,9 @@ void request()
     // if there is a request the master has been decided so stop checking for the master
     check_for_master = false;
 
-    switch (mode)
+    switch (method)
     {
-    case MODE_KEY:
+    case METHOD_GET_KEY_STATE:
         packSwitchState(switch_state[KEYBOARD_HALF]);
         break;
     }
@@ -85,38 +81,24 @@ void request()
 
 void setKey(const byte buf[2])
 {
-    const byte fn = (buf[0] & 0b10000000) >> 7;
+    const byte layer = (buf[0] & 0b10000000) >> 7;
     const byte side = (buf[0] & 0b01000000) >> 6;
     const byte row = (buf[0] & 0b00111000) >> 3;
     const byte col = buf[0] & 0b00000111;
 
-    key_layout[fn][side][row][col] = buf[1];
-    EEPROM.update(col + (COL_LEN * row) + (COL_LEN * ROW_LEN * side) + (COL_LEN * ROW_LEN * 2 * fn), buf[1]);
-}
-
-void setFnKey(const byte buf)
-{
-    fn_keyboard_half = (buf & 0b01000000) >> 6;
-    fn_row = (buf & 0b00111000) >> 3;
-    fn_col = buf & 0b00000111;
-
-    EEPROM.update(168, buf);
+    key_layout[layer][side][row][col] = buf[1];
+    EEPROM.update(col + (COL_LEN * row) + (COL_LEN * ROW_LEN * (side + 2 * layer)), buf[1]);
 }
 
 void receive(int length)
 {
-    mode = Wire.read();
+    method = Wire.read();
 
-    if (mode == MODE_SET_KEY && length == 3)
+    if (method == METHOD_SET_KEY && length == 3)
     {
-        const byte buf[2] = {(unsigned char)Wire.read(), (unsigned char)Wire.read()};
+        const byte buf[2] = {(byte)Wire.read(), (byte)Wire.read()};
 
         setKey(buf);
-    }
-
-    if (mode == MODE_SET_FN_KEY && length == 2)
-    {
-        setFnKey(Wire.read());
     }
 }
 
@@ -141,7 +123,7 @@ void setup()
     Wire.onRequest(request);
     Wire.onReceive(receive);
 
-    // initialize switch pin mode
+    // initialize switch pin method
     for (byte i = 0; i < ROW_LEN; i++)
     {
         pinMode(ROW_PIN[i], OUTPUT);
@@ -188,9 +170,6 @@ void loop()
 
         // initialize key layout from EEPROM
         EEPROM.get(0, key_layout);
-        fn_keyboard_half = (EEPROM[168] & 0b01000000) >> 6;
-        fn_row = (EEPROM[168] & 0b00111000) >> 3;
-        fn_col = EEPROM[168] & 0b00000111;
 
         // enable serial communication
         Serial.begin(115200);
@@ -221,33 +200,18 @@ void loop()
         {
             switch (Serial.read())
             {
-            case MODE_GET_KEY_LAYOUT:
+            case METHOD_GET_KEY_LAYOUT:
                 Serial.write((char *)key_layout, sizeof(key_layout));
                 break;
-            case MODE_SET_KEY:
+            case METHOD_SET_KEY:
             {
                 const byte buf[2] = {(byte)Serial.read(), (byte)Serial.read()};
 
                 setKey(buf);
 
                 Wire.beginTransmission(I2C_ADDR);
-                Wire.write(MODE_SET_KEY);
+                Wire.write(METHOD_SET_KEY);
                 Wire.write(buf, sizeof(buf));
-                Wire.endTransmission();
-                break;
-            }
-            case MODE_GET_FN_KEY:
-                Serial.write(EEPROM[168]);
-                break;
-            case MODE_SET_FN_KEY:
-            {
-                const byte buf = Serial.read();
-
-                setFnKey(buf);
-
-                Wire.beginTransmission(I2C_ADDR);
-                Wire.write(MODE_SET_FN_KEY);
-                Wire.write(buf);
                 Wire.endTransmission();
                 break;
             }
