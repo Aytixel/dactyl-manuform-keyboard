@@ -46,7 +46,7 @@ const keylayout_fr_fr = {
     // 0x2E: ["Equal", "="],
     0x2F: ["Caret", "^"],               //
     0x30: ["Dollar", "$"],              //
-    0x31: ["AngleBracketLeft", "<"],    //
+    0x31: ["Star", "*"],                //
     // 0x32
     0x33: ["Keym", "m"],                //
     0x34: ["UGrave", "ù"],              //
@@ -97,6 +97,7 @@ const keylayout_fr_fr = {
     // 0x61: ["Keypad9"],
     // 0x62: ["Keypad0"],
     // 0x63: ["KeypadPeriod"],
+    0x64: ["AngleBracketLeft", "<"],
 
     [0x04 | MOD_LEFT_SHIFT]: ["KeyQ", "Q"],                 //
     // [0x05 | MOD_LEFT_SHIFT]: ["KeyB", "B"],
@@ -139,7 +140,7 @@ const keylayout_fr_fr = {
     // [0x2E | MOD_LEFT_SHIFT]: ["Plus", "+"],
     [0x2F | MOD_LEFT_SHIFT]: ["Diaeresis", "¨"],            //
     [0x30 | MOD_LEFT_SHIFT]: ["Pound", "£"],                //
-    [0x31 | MOD_LEFT_SHIFT]: ["AngleBracketRight", ">"],    //
+    [0x31 | MOD_LEFT_SHIFT]: ["=", ">"],    //
     // 0x32
     [0x33 | MOD_LEFT_SHIFT]: ["KeyM", "M"],                 //
     [0x34 | MOD_LEFT_SHIFT]: ["Percent", "%"],              //
@@ -159,6 +160,7 @@ const keylayout_fr_fr = {
     // [0x61 | MOD_LEFT_SHIFT]: ["KeypadPageUp"],
     // [0x62 | MOD_LEFT_SHIFT]: ["KeypadInsert"],
     // [0x63 | MOD_LEFT_SHIFT]: ["KeypadDelete"],
+    [0x64 | MOD_LEFT_SHIFT]: ["AngleBracketRight", ">"],    //
 
     // 0x04 - 0x07
     [0x08 | MOD_ALT_GRAPH]: ["Euro", "€"],                  //
@@ -179,12 +181,12 @@ const keylayout_fr_fr = {
     [0x30 | MOD_ALT_GRAPH]: ["Currency", "¤"],              //
     // 0x31 - 0x63
 
-    // [0xE0 | MOD_LEFT_CTRL]: ["ControlLeft"],
-    // [0xE1 | MOD_LEFT_SHIFT]: ["ShiftLeft"],
-    // [0xE2 | MOD_LEFT_ALT]: ["AltLeft"],
-    // [0xE3 | MOD_LEFT_GUI]: ["MetaLeft"],
-    // [0xE4 | MOD_RIGHT_CTRL]: ["ControlRight"],
-    // [0xE5 | MOD_RIGHT_SHIFT]: ["ShiftRight"],
-    [0xE6 | MOD_ALT_GRAPH]: ["AltGraph"],                   //
-    // [0xE7 | MOD_RIGHT_GUI]: ["MetaRight"],
+    // [MOD_LEFT_CTRL]: ["ControlLeft"],
+    // [MOD_LEFT_SHIFT]: ["ShiftLeft"],
+    // [MOD_LEFT_ALT]: ["AltLeft"],
+    // [MOD_LEFT_GUI]: ["MetaLeft"],
+    // [MOD_RIGHT_CTRL]: ["ControlRight"],
+    // [MOD_RIGHT_SHIFT]: ["ShiftRight"],
+    [MOD_ALT_GRAPH]: ["AltGraph"],                          //
+    // [MOD_RIGHT_GUI]: ["MetaRight"],
 }

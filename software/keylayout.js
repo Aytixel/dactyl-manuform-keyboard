@@ -108,6 +108,7 @@ function getKeyLayout(local_keylayout) {
         0x61: ["Keypad9"],
         0x62: ["Keypad0"],
         0x63: ["KeypadPeriod"],
+        // 0x64
 
         [0x04 | MOD_LEFT_SHIFT]: ["KeyA", "A"],
         [0x05 | MOD_LEFT_SHIFT]: ["KeyB", "B"],
@@ -170,15 +171,16 @@ function getKeyLayout(local_keylayout) {
         [0x61 | MOD_LEFT_SHIFT]: ["KeypadPageUp"],
         [0x62 | MOD_LEFT_SHIFT]: ["KeypadInsert"],
         [0x63 | MOD_LEFT_SHIFT]: ["KeypadDelete"],
+        // 0x64
 
-        [0xE0 | MOD_LEFT_CTRL]: ["ControlLeft"],
-        [0xE1 | MOD_LEFT_SHIFT]: ["ShiftLeft"],
-        [0xE2 | MOD_LEFT_ALT]: ["AltLeft"],
-        [0xE3 | MOD_LEFT_GUI]: ["MetaLeft"],
-        [0xE4 | MOD_RIGHT_CTRL]: ["ControlRight"],
-        [0xE5 | MOD_RIGHT_SHIFT]: ["ShiftRight"],
-        [0xE6 | MOD_RIGHT_ALT]: ["AltRight"],
-        [0xE7 | MOD_RIGHT_GUI]: ["MetaRight"],
+        [MOD_LEFT_CTRL]: ["ControlLeft"],
+        [MOD_LEFT_SHIFT]: ["ShiftLeft"],
+        [MOD_LEFT_ALT]: ["AltLeft"],
+        [MOD_LEFT_GUI]: ["MetaLeft"],
+        [MOD_RIGHT_CTRL]: ["ControlRight"],
+        [MOD_RIGHT_SHIFT]: ["ShiftRight"],
+        [MOD_RIGHT_ALT]: ["AltRight"],
+        [MOD_RIGHT_GUI]: ["MetaRight"],
     }
     
     if (local_keylayout) {

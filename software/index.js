@@ -125,7 +125,7 @@ function updateKeyboardPreview() {
         const { layer, side, row, col } = indexToIndexes(i)
 
         key_preview_layout[layer][side][row][col].dataset.code = new_key_layout[layer][side][row][col]
-        key_preview_layout[layer][side][row][col].textContent = key_layout[new_key_layout[layer][side][row][col]].join(", ")
+        key_preview_layout[layer][side][row][col].textContent = (key_layout[new_key_layout[layer][side][row][col]] || []).join(", ")
     }
 }
 
@@ -133,7 +133,7 @@ get_config_button.addEventListener("click", () => openPortThen(async ({ writer, 
     await writer.write(new Uint8Array([METHOD_GET_KEY_LAYOUT]))
     await timeout(200)
 
-    buffer = new Uint8Array((await reader.read(new Uint8Array(ALL_LAYER_LEN))).value.buffer)
+    const buffer = new Uint16Array((await reader.read(new Uint16Array(ALL_LAYER_LEN))).value.buffer)
 
     for (const i in buffer) {
         const { layer, side, row, col } = indexToIndexes(i)
@@ -150,13 +150,15 @@ program_button.addEventListener("click", () => openPortThen(async ({ writer }) =
         const { layer, side, row, col } = indexToIndexes(i)
 
         if (old_key_layout[layer][side][row][col] != new_key_layout[layer][side][row][col]) {
-            await writer.write(new Uint8Array([
+            const buffer = new Uint8Array([
                 METHOD_SET_KEY,
-                (layer & 0b00000111)
+                (layer & 0b00000111),
                 ((side & 0b00000001) << 6) + ((row & 0b00000111) << 3) + (col & 0b00000111),
-                new_key_layout[layer][side][row][col] & 0xFF00 >> 8,
-                new_key_layout[layer][side][row][col] & 0x00FF,
-            ]))
+                (new_key_layout[layer][side][row][col] & 0xFF00) >> 8,
+                (new_key_layout[layer][side][row][col] & 0x00FF),
+            ])
+            console.log(new_key_layout[layer][side][row][col], layer & 0b00000111, buffer)
+            await writer.write(buffer)
 
             old_key_layout[layer][side][row][col] = new_key_layout[layer][side][row][col]
         }

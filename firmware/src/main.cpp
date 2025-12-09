@@ -86,23 +86,23 @@ void setKey(const uint8_t buf[4])
     const uint8_t row = (buf[1] & 0b00111000) >> 3;
     const uint8_t col = buf[1] & 0b00000111;
 
+    const uint16_t position = (
+            (uint16_t)col
+                + (COL_LEN * (uint16_t)row)
+                + (SIDE_LEN * (uint16_t)side)
+                + (LAYER_LEN * (uint16_t)layer)
+        ) * sizeof(uint16_t);
+
     key_layout[layer][side][row][col] = ((uint16_t)buf[2] << 8) + buf[3];
-    EEPROM.update(
-        (
-            (uint16_t)col +
-            (COL_LEN * (uint16_t)row) +
-            (SIDE_LEN * ((uint16_t)side + 2 * (uint16_t)layer))
-        ) * sizeof(uint16_t),
-        ((uint16_t)buf[2] << 8) + (uint16_t)buf[3]
-    );
+    EEPROM.update(position + 1, buf[2]);
+    EEPROM.update(position, buf[3]);
 }
 
 void receive(int length)
 {
     method = Wire.read();
-    length -= 1;
 
-    if (method == METHOD_SET_KEY && length == 4)
+    if (method == METHOD_SET_KEY && length == 5)
     {
         const uint8_t buf[4] = {
             (uint8_t)Wire.read(),
