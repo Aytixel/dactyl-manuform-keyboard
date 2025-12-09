@@ -8,7 +8,7 @@
 #define LEFT 0
 #define RIGHT 1
 
-#define LAYER_COUNT 5
+#define LAYER_COUNT 6
 #define SIDE_COUNT 2
 #define ROW_LEN 6
 #define COL_LEN 7
