@@ -2,7 +2,7 @@ async function timeout(timeout) {
     return new Promise(resolve => setTimeout(() => resolve(), timeout))
 }
 
-const LAYER_COUNT = 5
+const LAYER_COUNT = 6
 const SIDE_COUNT = 2
 const ROW_LEN = 6
 const COL_LEN = 7
@@ -19,16 +19,12 @@ const key_list = document.getElementById("key_list")
 const key_layout = getKeyLayout(keylayout_fr_fr)
 let selected_key = { name: "", code: 0 }
 
-function getKeyNameFromCode(code) {
-    return Object.entries(key_layout).filter(([_, _code]) => _code == code).map(([key]) => key).join(", ")
-}
-
 function updateKeyList() {
     const search = new RegExp(find_key_search_bar.value.split(" ").map(v => `(${v})`).join(".*"), "i")
-    const found_key = [...new Set(Object.entries(key_layout).filter(([name]) => search.test(name)).map(([_, code]) => code))].map(code => [getKeyNameFromCode(code), code])
+    const found_key = [...new Set(Object.entries(key_layout))].map(([code, names]) => [code, names.join(", ")]).filter(([_, name]) => name.length && search.test(name))
 
     key_list.innerHTML = "";
-    key_list.append(...found_key.map(([name, code]) => {
+    key_list.append(...found_key.map(([code, name]) => {
         const element = document.createElement("li")
         const button = document.createElement("button")
 
@@ -129,7 +125,7 @@ function updateKeyboardPreview() {
         const { layer, side, row, col } = indexToIndexes(i)
 
         key_preview_layout[layer][side][row][col].dataset.code = new_key_layout[layer][side][row][col]
-        key_preview_layout[layer][side][row][col].textContent = getKeyNameFromCode(new_key_layout[layer][side][row][col])
+        key_preview_layout[layer][side][row][col].textContent = key_layout[new_key_layout[layer][side][row][col]].join(", ")
     }
 }
 
