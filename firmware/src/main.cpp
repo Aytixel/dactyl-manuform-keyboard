@@ -150,53 +150,94 @@ void setup()
         pinMode(COL_PIN[i], INPUT_PULLUP);
 }
 
-void emulate(
-    const bool switch_state[ROW_LEN][COL_LEN],
-    bool last_switch_state[ROW_LEN][COL_LEN],
-    const uint16_t key_layout[ROW_LEN][COL_LEN]
+void press(uint16_t key) {
+    // drop every key outside of usable usage id range
+    if (key && (key & 0x00FF) <= 0xE7)
+        NKROKeyboard.press(key);
+}
+
+void release(uint16_t key) {
+    // drop every key outside of usable usage range
+    if (key && (key & 0x00FF) <= 0xE7)
+        NKROKeyboard.release(key);
+}
+
+bool emulate(
+    const bool switch_state[SIDE_COUNT][ROW_LEN][COL_LEN],
+    bool last_switch_state[SIDE_COUNT][ROW_LEN][COL_LEN],
+    const uint16_t key_layout[SIDE_COUNT][ROW_LEN][COL_LEN]
 )
 {
-    for (uint8_t row = 0; row < ROW_LEN; row++)
+    bool switch_state_changed = false;
+
+    for (uint8_t side = 0; side < SIDE_COUNT; side++)
     {
-        for (uint8_t col = 0; col < COL_LEN; col++)
+        for (uint8_t row = 0; row < ROW_LEN; row++)
         {
-            if (
-                switch_state[row][col] != last_switch_state[row][col]
-                    && key_layout[row][col]
-            )
+            for (uint8_t col = 0; col < COL_LEN; col++)
             {
-                uint8_t low_key = key_layout[row][col] & 0x00FF;
-                uint8_t high_key = (key_layout[row][col] & 0xFF00) >> 8;
+                if (
+                    switch_state[side][row][col] == last_switch_state[side][row][col]
+                )
+                    continue;
+
+                // process special keys
+                uint8_t low_key = key_layout[side][row][col] & 0x00FF;
+                uint8_t high_key = (key_layout[side][row][col] & 0xFF00) >> 8;
 
                 if (
-                    (low_key == CODE_LAYER_PRESS && switch_state[row][col])
-                        || (low_key == CODE_LAYER_RELEASE && !switch_state[row][col])
+                    (low_key == CODE_LAYER_PRESS && switch_state[side][row][col])
+                        || (low_key == CODE_LAYER_RELEASE && !switch_state[side][row][col])
                 )
-                    layer = high_key;
-
-                // drop every code above max usage id
-                if (low_key > 0xE7)
-                    continue; 
-
-                if (switch_state[row][col])
-                    NKROKeyboard.press(key_layout[row][col]);
-                else
-                    NKROKeyboard.release(key_layout[row][col]);
-
-                if (last_layer != layer)
                 {
-                    NKROKeyboard.releaseAll();
+                    layer = high_key;
+                    continue;
+                }
 
-                    memset(
-                        last_switch_state,
-                        0,
-                        sizeof(bool) * SIDE_LEN
-                    );
+                // should ignore some special keys
+                switch_state_changed = true;
 
-                    last_layer = layer;
+                if (switch_state[side][row][col])
+                    press(key_layout[side][row][col]);
+                else
+                    release(key_layout[side][row][col]);
+            }
+        }
+    }
+
+    return switch_state_changed;
+}
+
+// this function allows key combinations between layers
+void switch_layer(
+    const bool switch_state_changed,
+    const bool switch_state[SIDE_COUNT][ROW_LEN][COL_LEN],
+    const uint16_t key_layout[SIDE_COUNT][ROW_LEN][COL_LEN],
+    const uint16_t last_key_layout[SIDE_COUNT][ROW_LEN][COL_LEN]
+) {
+    if (switch_state_changed && last_layer != layer)
+    {
+        for (uint8_t side = 0; side < SIDE_COUNT; side++)
+        {
+            for (uint8_t row = 0; row < ROW_LEN; row++)
+            {
+                for (uint8_t col = 0; col < COL_LEN; col++)
+                {
+                    if (switch_state[side][row][col])
+                    {
+                        if (key_layout[side][row][col] != last_key_layout[side][row][col])
+                        {
+                            press(key_layout[side][row][col]);
+                            release(last_key_layout[side][row][col]);
+                        }
+                    }
+                    else
+                        release(last_key_layout[side][row][col]);
                 }
             }
         }
+
+        last_layer = layer;
     }
 }
 
@@ -229,15 +270,17 @@ void loop()
     {
         unpackSwitchState(switch_state[!KEYBOARD_HALF]);
 
-        emulate(
-            switch_state[LEFT],
-            last_switch_state[LEFT],
-            key_layout[layer][LEFT]
+        bool switch_state_changed = emulate(
+            switch_state,
+            last_switch_state,
+            key_layout[layer]
         );
-        emulate(
-            switch_state[RIGHT],
-            last_switch_state[RIGHT],
-            key_layout[layer][RIGHT]
+
+        switch_layer(
+            switch_state_changed,
+            switch_state,
+            key_layout[layer],
+            key_layout[last_layer]
         );
 
         memcpy(last_switch_state, switch_state, sizeof(switch_state));
