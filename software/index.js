@@ -1,7 +1,3 @@
-async function timeout(timeout) {
-    return new Promise(resolve => setTimeout(() => resolve(), timeout))
-}
-
 const LAYER_COUNT = 6
 const SIDE_COUNT = 2
 const ROW_LEN = 6
@@ -72,21 +68,30 @@ const keyboard_preview_children = []
 const old_key_layout = generateConfigKeyLayout()
 const new_key_layout = generateConfigKeyLayout()
 const key_preview_layout = generateConfigKeyLayout()
+const select_layer = document.getElementById("select_layer")
 
 for (let i = 0; i < LAYER_COUNT; i++) {
-    const state = document.createElement("div")
+    const layer = document.createElement("div")
     const left = document.createElement("div")
     const right = document.createElement("div")
 
-    state.classList.add("state")
+    layer.classList.add("layer")
+    layer.hidden = i
     left.classList.add("left")
     right.classList.add("right")
-    state.append(left, right)
-    keyboard_preview.append(state)
-    keyboard_preview_children.push(state.children)
+    layer.append(left, right)
+    keyboard_preview.append(layer)
+    keyboard_preview_children.push(layer.children)
+
+    const layer_option = document.createElement("option")
+
+    layer_option.textContent = `Layer ${i + 1}`
+    layer_option.value = i
+
+    select_layer.append(layer_option)
 }
 
-document.getElementById("show_layer_state").addEventListener("input", () => keyboard_preview.classList.toggle("layer_state"))
+select_layer.addEventListener("input", () => keyboard_preview.childNodes.forEach((layer, index) => layer.hidden = index != +select_layer.value))
 
 function indexToIndexes(i) {
     return {
@@ -131,9 +136,8 @@ function updateKeyboardPreview() {
 
 get_config_button.addEventListener("click", () => openPortThen(async ({ writer, reader }) => {
     await writer.write(new Uint8Array([METHOD_GET_KEY_LAYOUT]))
-    await timeout(200)
 
-    const buffer = new Uint16Array((await reader.read(new Uint16Array(ALL_LAYER_LEN))).value.buffer)
+    const buffer = new Uint16Array((await reader.read(new Uint16Array(ALL_LAYER_LEN), { min: ALL_LAYER_LEN })).value.buffer)
 
     for (const i in buffer) {
         const { layer, side, row, col } = indexToIndexes(i)
@@ -157,7 +161,6 @@ program_button.addEventListener("click", () => openPortThen(async ({ writer }) =
                 (new_key_layout[layer][side][row][col] & 0xFF00) >> 8,
                 (new_key_layout[layer][side][row][col] & 0x00FF),
             ])
-            console.log(new_key_layout[layer][side][row][col], layer & 0b00000111, buffer)
             await writer.write(buffer)
 
             old_key_layout[layer][side][row][col] = new_key_layout[layer][side][row][col]
@@ -165,8 +168,6 @@ program_button.addEventListener("click", () => openPortThen(async ({ writer }) =
 
         program_button.children[0].value = i + 1
     }
-
-    await timeout(500)
 
     program_button.children[0].value = 0
 }))

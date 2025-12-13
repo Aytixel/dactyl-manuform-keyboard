@@ -14,7 +14,8 @@ body {
 }
 
 input,
-button {
+button, 
+select {
     padding: 0.5em;
 }
 
@@ -46,7 +47,7 @@ button {
     overflow-y: scroll;
 }
 
-#search_bar button {
+#search_bar :is(button, select) {
     margin: 0.4em;
 
     padding: 0.5em;
@@ -87,7 +88,7 @@ main {
     height: 100%;
 }
 
-#keyboard_preview .state {
+#keyboard_preview .layer {
     display: flex;
     flex-wrap: wrap;
     grid-column: 1;
@@ -95,8 +96,8 @@ main {
     gap: 5em;
 }
 
-#keyboard_preview:not(.layer_state) .state:first-child {
-    z-index: 1;
+#keyboard_preview .layer[hidden] {
+    display: none;
 }
 
 #keyboard_preview :is(.left, .right) {
