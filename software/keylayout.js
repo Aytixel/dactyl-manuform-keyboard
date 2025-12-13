@@ -9,6 +9,9 @@ const MOD_RIGHT_SHIFT = 1 << 13
 const MOD_RIGHT_ALT = 1 << 14
 const MOD_RIGHT_GUI = 1 << 15
 
+const CODE_LAYER_PRESS = 255
+const CODE_LAYER_RELEASE = 254
+
 // The default is a US layout
 function getKeyLayout(local_keylayout) {
     const keylayout = {
@@ -181,6 +184,20 @@ function getKeyLayout(local_keylayout) {
         [MOD_RIGHT_SHIFT]: ["ShiftRight"],
         [MOD_RIGHT_ALT]: ["AltRight"],
         [MOD_RIGHT_GUI]: ["MetaRight"],
+
+        [(0 << 8) + CODE_LAYER_PRESS]: ["LayerPress1"],
+        [(1 << 8) + CODE_LAYER_PRESS]: ["LayerPress2"],
+        [(2 << 8) + CODE_LAYER_PRESS]: ["LayerPress3"],
+        [(3 << 8) + CODE_LAYER_PRESS]: ["LayerPress4"],
+        [(4 << 8) + CODE_LAYER_PRESS]: ["LayerPress5"],
+        [(5 << 8) + CODE_LAYER_PRESS]: ["LayerPress6"],
+
+        [(0 << 8) + CODE_LAYER_RELEASE]: ["LayerRelease1"],
+        [(1 << 8) + CODE_LAYER_RELEASE]: ["LayerRelease2"],
+        [(2 << 8) + CODE_LAYER_RELEASE]: ["LayerRelease3"],
+        [(3 << 8) + CODE_LAYER_RELEASE]: ["LayerRelease4"],
+        [(4 << 8) + CODE_LAYER_RELEASE]: ["LayerRelease5"],
+        [(5 << 8) + CODE_LAYER_RELEASE]: ["LayerRelease6"],
     }
     
     if (local_keylayout) {

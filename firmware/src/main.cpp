@@ -21,16 +21,19 @@
 #define METHOD_GET_KEY_LAYOUT 1
 #define METHOD_SET_KEY 2
 
+#define CODE_LAYER_PRESS 255
+#define CODE_LAYER_RELEASE 254
+
 // variables
 const uint8_t ROW_PIN[ROW_LEN] = {4, 5, 6, 7, 8, 9};
 const uint8_t COL_PIN[COL_LEN] = {A2, A1, A0, 15, 14, 16, 10};
 
 uint16_t key_layout[LAYER_COUNT][SIDE_COUNT][ROW_LEN][COL_LEN] = {0};
 
-bool last_switch_state[LAYER_COUNT][SIDE_COUNT][ROW_LEN][COL_LEN] = {false};
+bool last_switch_state[SIDE_COUNT][ROW_LEN][COL_LEN] = {false};
 bool switch_state[SIDE_COUNT][ROW_LEN][COL_LEN] = {false};
-bool fn_state = false;
-bool last_fn_state = false;
+uint8_t layer = 0;
+uint8_t last_layer = 0;
 
 bool check_for_master = true;
 bool is_master = false;
@@ -158,26 +161,39 @@ void emulate(
         for (uint8_t col = 0; col < COL_LEN; col++)
         {
             if (
-                switch_state[row][col] != last_switch_state[row][col] &&
-                key_layout[row][col]
+                switch_state[row][col] != last_switch_state[row][col]
+                    && key_layout[row][col]
             )
             {
+                uint8_t low_key = key_layout[row][col] & 0x00FF;
+                uint8_t high_key = (key_layout[row][col] & 0xFF00) >> 8;
+
+                if (
+                    (low_key == CODE_LAYER_PRESS && switch_state[row][col])
+                        || (low_key == CODE_LAYER_RELEASE && !switch_state[row][col])
+                )
+                    layer = high_key;
+
+                // drop every code above max usage id
+                if (low_key > 0xE7)
+                    continue; 
+
                 if (switch_state[row][col])
                     NKROKeyboard.press(key_layout[row][col]);
                 else
                     NKROKeyboard.release(key_layout[row][col]);
 
-                if (last_fn_state != fn_state)
+                if (last_layer != layer)
                 {
                     NKROKeyboard.releaseAll();
 
                     memset(
-                        last_switch_state[last_fn_state],
+                        last_switch_state,
                         0,
-                        sizeof(last_switch_state[last_fn_state])
+                        sizeof(bool) * SIDE_LEN
                     );
 
-                    last_fn_state = fn_state;
+                    last_layer = layer;
                 }
             }
         }
@@ -213,20 +229,18 @@ void loop()
     {
         unpackSwitchState(switch_state[!KEYBOARD_HALF]);
 
-        fn_state = switch_state[1][4][6];
-
         emulate(
             switch_state[LEFT],
-            last_switch_state[fn_state][LEFT],
-            key_layout[fn_state][LEFT]
+            last_switch_state[LEFT],
+            key_layout[layer][LEFT]
         );
         emulate(
             switch_state[RIGHT],
-            last_switch_state[fn_state][RIGHT],
-            key_layout[fn_state][RIGHT]
+            last_switch_state[RIGHT],
+            key_layout[layer][RIGHT]
         );
 
-        memcpy(last_switch_state[fn_state], switch_state, sizeof(switch_state));
+        memcpy(last_switch_state, switch_state, sizeof(switch_state));
 
         if (Serial.available())
         {
