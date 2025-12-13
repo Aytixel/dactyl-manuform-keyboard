@@ -5,53 +5,112 @@
     z-index: 0;
     margin: 0;
     padding: 0;
+
+    scrollbar-color: #393277 #39327744;
+    scrollbar-width: thin;
 }
 
 body {
     display: flex;
 
     width: 100%;
+
+    background-color: #1c1817;
 }
 
 input,
-button {
-    padding: 0.5em;
+button,
+select,
+label {
+    padding: 0.5em 1em;
+
+    height: 2rem;
+
+    box-sizing: border-box;
+
+    border-radius: 0.25em;
+    border: none;
+
+    font-size: 0.8em;
+    font-family: sans-serif;
+
+    line-height: 1.5em;
+
+    color: #ede9e9;
+
+    text-align: left;
+
+    fill: #ede9e9;
+
+    background-color: #393277;
+
+    cursor: pointer;
+}
+
+:is(input, button, select)[disabled],
+label:has(input[disabled]) {
+    color: #ede9e988;
+    fill: #ede9e988;
+}
+
+input[type="file"] {
+    display: none;
 }
 
 /* Seach Bar */
 #search_bar {
     display: flex;
     flex-direction: column;
+    gap: 0.6em;
 
     position: sticky;
     top: 0;
 
     margin: 0.5em;
+    margin-right: 0;
 
+    padding-right: 0.4em;
+
+    width: 14em;
     height: calc(100dvh - 1em);
 
     box-sizing: border-box;
-}
 
-#search_bar input {
-    flex-shrink: 0;
-    flex-grow: 0;
+    border-right: 0.15em solid #775827;
 
-    margin-bottom: 0.5em;
+    #find_key {
+        flex-shrink: 0;
+        flex-grow: 0;
 
-    width: 100%;
-}
+        width: 100%;
+    }
 
-#search_bar ul {
-    overflow-y: scroll;
-}
+    #selected_key {
+        flex-shrink: 0;
+    }
 
-#search_bar button {
-    margin: 0.4em;
+    .splitter {
+        border-bottom: 0.15em solid #775827;
+    }
 
-    padding: 0.5em;
+    #key_list {
+        overflow-y: scroll;
 
-    width: calc(100% - 0.8em);
+        button {
+            margin-block: 0.4em;
+            margin-right: 0.4em;
+
+            width: calc(100% - 0.4em);
+        }
+
+        li:first-child button {
+            margin-top: 0;
+        }
+
+        li:last-child button {
+            margin-bottom: 0;
+        }
+    }
 }
 
 /* Main */
@@ -60,6 +119,7 @@ main {
     flex-direction: column;
 
     margin: 0.5em;
+    margin-left: 0.4;
 
     width: 100%;
 }
@@ -69,12 +129,31 @@ main {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 1em;
-}
+    justify-content: right;
+    gap: 0.6em;
 
-/* Program */
-#program progress[value="0"] {
-    display: none;
+    padding-bottom: 0.6em;
+
+    border-bottom: 0.15em solid #775827;
+
+    button,
+    label {
+        width: 2.5em;
+
+        padding: 0.5em;
+    }
+
+    .splitter {
+        height: 100%;
+
+        border-left: 0.15em solid #775827;
+    }
+
+    #link_device:not(.linked) svg:first-child,
+    #link_device.linked svg:last-child,
+    #program progress[value="0"] {
+        display: none;
+    }
 }
 
 /* Keyboard Preview */
@@ -85,105 +164,130 @@ main {
 
     width: 100%;
     height: 100%;
-}
 
-#keyboard_preview .state {
-    display: flex;
-    flex-wrap: wrap;
-    grid-column: 1;
-    grid-row: 1;
-    gap: 5em;
-}
+    .layer {
+        display: flex;
+        flex-wrap: wrap;
+        grid-column: 1;
+        grid-row: 1;
+        gap: 5em;
+    }
 
-#keyboard_preview:not(.fn_state) .state:first-child {
-    z-index: 1;
-}
+    .layer[hidden] {
+        display: none;
+    }
 
-#keyboard_preview :is(.left, .right) {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(6, 1fr);
-    gap: 0.5em;
+    :is(.left, .right) {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-template-rows: repeat(6, 1fr);
+        gap: 0.5em;
 
-    padding: 1em;
-    padding-top: 2.5em;
-    padding-bottom: 7.3em;
+        padding: 1em;
+        padding-top: 2.5em;
+        padding-bottom: 7.3em;
 
-    width: 30em;
-}
+        width: 30em;
+    }
 
-#keyboard_preview button {
-    padding: 0.2em;
+    button {
+        padding: 0.2em;
 
-    aspect-ratio: 1;
-    min-width: 0;
+        aspect-ratio: 1;
+        width: 4.75em;
+        height: 4.75em;
 
-    box-sizing: border-box;
+        box-sizing: border-box;
 
-    word-wrap: break-word;
-}
+        word-wrap: break-word;
 
-/* Keyboard Preview Position Button */
-#keyboard_preview :is(.left button[data-row="5"]:is([data-col="0"], [data-col="1"]),
-    .right button[data-row="5"]:is([data-col="5"], [data-col="6"])),
-#keyboard_preview :is(.left button[data-col="6"]:is([data-row="3"], [data-row="4"], [data-row="5"]),
-    .right button[data-col="0"]:is([data-row="3"], [data-row="4"], [data-row="5"])) {
-    visibility: hidden;
-}
+        text-align: center;
+    }
 
-#keyboard_preview :is(.left, .right) button:is([data-col="2"], [data-col="3"], [data-col="4"]) {
-    transform: translateY(-2em);
-}
+    /* Position Button */
+    .left {
+        button[data-row="5"]:is([data-col="0"], [data-col="1"]),
+        button[data-col="6"]:is(
+                [data-row="3"],
+                [data-row="4"],
+                [data-row="5"]
+            ) {
+            visibility: hidden;
+        }
 
-#keyboard_preview :is(.left button:is([data-col="5"], [data-col="6"]),
-    .right button:is([data-col="0"], [data-col="1"])) {
-    transform: translateY(-1em);
-}
+        button:is([data-col="2"], [data-col="3"], [data-col="4"]) {
+            transform: translateY(-2em);
+        }
 
-#keyboard_preview .left button[data-col="4"][data-row="4"] {
-    transform: rotate(10deg) translateX(1em);
-}
+        button:is([data-col="5"], [data-col="6"]) {
+            transform: translateY(-1em);
+        }
 
-#keyboard_preview .left button[data-col="5"][data-row="4"] {
-    transform: translateY(1em) rotate(10deg) translateX(1em);
-}
+        button[data-col="4"][data-row="4"] {
+            transform: rotate(10deg) translateX(1em);
+        }
 
-#keyboard_preview .right button[data-col="2"][data-row="4"] {
-    transform: rotate(-10deg) translateX(-1em);
-}
+        button[data-col="5"][data-row="4"] {
+            transform: translateY(1em) rotate(10deg) translateX(1em);
+        }
 
-#keyboard_preview .right button[data-col="1"][data-row="4"] {
-    transform: translateY(1em) rotate(-10deg) translateX(-1em);
-}
+        button[data-col="4"][data-row="5"] {
+            transform: translateY(3.5em) rotate(-10deg) translateX(4em);
+        }
 
-#keyboard_preview .left button[data-col="4"][data-row="5"] {
-    transform: translateY(3em) rotate(-10deg) translateX(4em);
-}
+        button[data-col="5"][data-row="5"] {
+            transform: translateY(2.5em) rotate(-10deg) translateX(4em);
+        }
 
-#keyboard_preview .left button[data-col="5"][data-row="5"] {
-    transform: translateY(2em) rotate(-10deg) translateX(4em);
-}
+        button[data-col="2"][data-row="5"] {
+            transform: translateY(11em) rotate(-10deg) translateX(16em);
+        }
 
-#keyboard_preview .left button[data-col="2"][data-row="5"] {
-    transform: translateY(10em) rotate(-10deg) translateX(15.5em);
-}
+        button[data-col="3"][data-row="5"] {
+            transform: translateY(10em) rotate(-10deg) translateX(16em);
+        }
+    }
 
-#keyboard_preview .left button[data-col="3"][data-row="5"] {
-    transform: translateY(9em) rotate(-10deg) translateX(15.5em);
-}
+    .right {
+        button[data-row="5"]:is([data-col="5"], [data-col="6"]),
+        button[data-col="0"]:is(
+                [data-row="3"],
+                [data-row="4"],
+                [data-row="5"]
+            ) {
+            visibility: hidden;
+        }
 
-#keyboard_preview .right button[data-col="2"][data-row="5"] {
-    transform: translateY(3em) rotate(10deg) translateX(-4em);
-}
+        button:is([data-col="2"], [data-col="3"], [data-col="4"]) {
+            transform: translateY(-2em);
+        }
 
-#keyboard_preview .right button[data-col="1"][data-row="5"] {
-    transform: translateY(2em) rotate(10deg) translateX(-4em);
-}
+        button:is([data-col="0"], [data-col="1"]) {
+            transform: translateY(-1em);
+        }
 
-#keyboard_preview .right button[data-col="4"][data-row="5"] {
-    transform: translateY(10em) rotate(10deg) translateX(-15.5em);
-}
+        button[data-col="2"][data-row="4"] {
+            transform: rotate(-10deg) translateX(-1em);
+        }
 
-#keyboard_preview .right button[data-col="3"][data-row="5"] {
-    transform: translateY(9em) rotate(10deg) translateX(-15.5em);
+        button[data-col="1"][data-row="4"] {
+            transform: translateY(1em) rotate(-10deg) translateX(-1em);
+        }
+
+        button[data-col="2"][data-row="5"] {
+            transform: translateY(3.5em) rotate(10deg) translateX(-4em);
+        }
+
+        button[data-col="1"][data-row="5"] {
+            transform: translateY(2.5em) rotate(10deg) translateX(-4em);
+        }
+
+        button[data-col="4"][data-row="5"] {
+            transform: translateY(11em) rotate(10deg) translateX(-16em);
+        }
+
+        button[data-col="3"][data-row="5"] {
+            transform: translateY(10em) rotate(10deg) translateX(-16em);
+        }
+    }
 }

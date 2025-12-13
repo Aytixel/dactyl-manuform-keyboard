@@ -1,199 +1,265 @@
-async function timeout(timeout) {
-    return new Promise(resolve => setTimeout(() => resolve(), timeout))
-}
+const LAYER_COUNT = 6;
+const SIDE_COUNT = 2;
+const ROW_LEN = 6;
+const COL_LEN = 7;
 
-const find_key_search_bar = document.getElementById("find_key")
-const key_list = document.getElementById("key_list")
-const key_layout = getKeyLayout(keylayout_fr_fr)
-let selected_key = { name: "", code: 0 }
+const SIDE_LEN = ROW_LEN * COL_LEN;
+const LAYER_LEN = SIDE_LEN * SIDE_COUNT;
+const ALL_LAYER_LEN = LAYER_LEN * LAYER_COUNT;
 
-function getKeyNameFromCode(code) {
-    return Object.entries(key_layout).filter(([_, _code]) => _code == code).map(([key]) => key).join(", ")
-}
+const METHOD_GET_KEY_LAYOUT = 1;
+const METHOD_SET_KEY = 2;
+
+const find_key_search_bar = document.getElementById("find_key");
+const selected_key_button = document.getElementById("selected_key");
+const key_list = document.getElementById("key_list");
+const key_layout = getKeyLayout(keylayout_fr_fr);
+let selected_key = { name: "", code: 0 };
 
 function updateKeyList() {
-    const search = new RegExp(find_key_search_bar.value.split(" ").map(v => `(${v})`).join(".*"), "i")
-    const found_key = [...new Set(Object.entries(key_layout).filter(([name]) => search.test(name)).map(([_, code]) => code))].map(code => [getKeyNameFromCode(code), code])
+  const search = new RegExp(
+    find_key_search_bar.value
+      .split(" ")
+      .map((v) => `(${v})`)
+      .join(".*"),
+    "i",
+  );
+  const found_key = [...new Set(Object.entries(key_layout))]
+    .map(([code, names]) => [code, names.join(", ")])
+    .filter(([_, name]) => name.length && search.test(name))
+    .sort((key_a, key_b) => key_a[1].localeCompare(key_b[1]));
 
-    key_list.innerHTML = "";
-    key_list.append(...found_key.map(([name, code]) => {
-        const element = document.createElement("li")
-        const button = document.createElement("button")
+  key_list.innerHTML = "";
+  key_list.append(
+    ...found_key.map(([code, name]) => {
+      const element = document.createElement("li");
+      const button = document.createElement("button");
 
-        button.addEventListener("click", () => selected_key = { name, code })
+      button.addEventListener("click", () => {
+        selected_key = { name, code };
+        selected_key_button.textContent = name;
+      });
 
-        button.textContent = name
-        button.dataset.code = code
-        element.append(button)
+      button.textContent = name;
+      button.dataset.code = code;
+      element.append(button);
 
-        return element
-    }))
+      return element;
+    }),
+  );
 }
 
-updateKeyList()
+updateKeyList();
 
-find_key_search_bar.addEventListener("input", updateKeyList)
+find_key_search_bar.addEventListener("input", updateKeyList);
 
-async function openPortThen(callback) {
-    const filters = [{ usbVendorId: 0x2341, usbProductId: 0x8036 }]
-    const port = await navigator.serial.requestPort({ filters })
-
-    await port.open({ baudRate: 115200 })
-
-    const writer = port.writable.getWriter()
-    const reader = port.readable.getReader({ mode: "byob" })
-
-    await callback({ port, writer, reader })
-
-    writer.releaseLock()
-    reader.releaseLock()
-
-    await port.close()
-}
+selected_key_button.addEventListener("click", () => {
+  selected_key = { name: "", code: 0 };
+  selected_key_button.textContent = "";
+});
 
 function generateConfigKeyLayout() {
-    return [...new Array(2)].map(() => [...new Array(2)].map(() => [...new Array(6)].map(() => [...new Array(7)])))
+  return [...new Array(LAYER_COUNT)].map(() =>
+    [...new Array(SIDE_COUNT)].map(() =>
+      [...new Array(ROW_LEN)].map(() => [...new Array(COL_LEN)]),
+    ),
+  );
 }
 
-const get_config_button = document.getElementById("get_config")
-const program_button = document.getElementById("program")
-const download_button = document.getElementById("download")
-const upload_file = document.getElementById("upload")
-const keyboard_preview = document.getElementById("keyboard_preview")
-const keyboard_preview_children = [...keyboard_preview.children].map(e => e.children)
-const old_key_layout = generateConfigKeyLayout()
-const new_key_layout = generateConfigKeyLayout()
-const key_preview_layout = generateConfigKeyLayout()
+const link_device_button = document.getElementById("link_device");
+const get_config_button = document.getElementById("get_config");
+const program_button = document.getElementById("program");
+const download_button = document.getElementById("download");
+const upload_file = document.getElementById("upload");
+const keyboard_preview = document.getElementById("keyboard_preview");
+const keyboard_preview_children = [];
+const old_key_layout = generateConfigKeyLayout();
+const new_key_layout = generateConfigKeyLayout();
+const key_preview_layout = generateConfigKeyLayout();
+const select_layer = document.getElementById("select_layer");
+let device = null;
 
-document.getElementById("show_fn_state").addEventListener("input", () => keyboard_preview.classList.toggle("fn_state"))
+for (let i = 0; i < LAYER_COUNT; i++) {
+  const layer = document.createElement("div");
+  const left = document.createElement("div");
+  const right = document.createElement("div");
+
+  layer.classList.add("layer");
+  layer.hidden = i;
+  left.classList.add("left");
+  right.classList.add("right");
+  layer.append(left, right);
+  keyboard_preview.append(layer);
+  keyboard_preview_children.push(layer.children);
+
+  const layer_option = document.createElement("option");
+
+  layer_option.textContent = `Layer ${i + 1}`;
+  layer_option.value = i;
+
+  select_layer.append(layer_option);
+}
+
+select_layer.addEventListener("input", () =>
+  keyboard_preview.childNodes.forEach(
+    (layer, index) => (layer.hidden = index != +select_layer.value),
+  ),
+);
 
 function indexToIndexes(i) {
-    return {
-        fn: Math.round(i / 168),
-        side: Math.round((i % 84) / 84),
-        row: Math.floor((i % 42) / 7),
-        col: i % 7
-    }
+  return {
+    layer: Math.floor(i / LAYER_LEN),
+    side: Math.floor((i % LAYER_LEN) / SIDE_LEN),
+    row: Math.floor((i % SIDE_LEN) / COL_LEN),
+    col: i % COL_LEN,
+  };
 }
 
-for (let i = 0; i < 168; i++) {
-    const { fn, side, row, col } = indexToIndexes(i)
-    const key_preview = document.createElement("button")
+for (let i = 0; i < ALL_LAYER_LEN; i++) {
+  const { layer, side, row, col } = indexToIndexes(i);
+  const key_preview = document.createElement("button");
 
-    function setConfigKey(fn, side, row, col, name, code) {
-        if (code == FN_KEY) {
-            key_preview_layout[1 - fn][side][row][col].textContent = name
-            key_preview_layout[1 - fn][side][row][col].dataset.code = code
-            new_key_layout[1 - fn][side][row][col] = code
-        }
-        else if (new_key_layout[fn][side][row][col] == FN_KEY) {
-            key_preview_layout[1 - fn][side][row][col].textContent = ""
-            key_preview_layout[1 - fn][side][row][col].dataset.code = 0
-            new_key_layout[1 - fn][side][row][col] = 0
-        }
+  function setConfigKey(layer, side, row, col, name, code) {
+    key_preview.textContent = name;
+    key_preview.dataset.code = code;
+    new_key_layout[layer][side][row][col] = code;
+  }
 
-        key_preview.textContent = name
-        key_preview.dataset.code = code
-        new_key_layout[fn][side][row][col] = code
-    }
+  key_preview.addEventListener("click", () =>
+    setConfigKey(layer, side, row, col, selected_key.name, selected_key.code),
+  );
 
-    key_preview.addEventListener("dblclick", () => setConfigKey(fn, side, row, col, "", 0))
-    key_preview.addEventListener("click", () => setConfigKey(fn, side, row, col, selected_key.name, selected_key.code))
+  key_preview.textContent = "";
+  key_preview.dataset.code = 0;
+  key_preview.dataset.layer = layer;
+  key_preview.dataset.side = side;
+  key_preview.dataset.row = row;
+  key_preview.dataset.col = col;
 
-    key_preview.textContent = ""
-    key_preview.dataset.code = 0
-    key_preview.dataset.fn = fn
-    key_preview.dataset.side = side
-    key_preview.dataset.row = row
-    key_preview.dataset.col = col
-
-    keyboard_preview_children[fn][side].append(key_preview_layout[fn][side][row][col] = key_preview)
+  keyboard_preview_children[layer][side].append(
+    (key_preview_layout[layer][side][row][col] = key_preview),
+  );
 }
 
 function updateKeyboardPreview() {
-    for (let i = 0; i < 168; i++) {
-        const { fn, side, row, col } = indexToIndexes(i)
+  for (let i = 0; i < ALL_LAYER_LEN; i++) {
+    const { layer, side, row, col } = indexToIndexes(i);
 
-        key_preview_layout[fn][side][row][col].dataset.code = new_key_layout[fn][side][row][col]
-        key_preview_layout[fn][side][row][col].textContent = getKeyNameFromCode(new_key_layout[fn][side][row][col])
-    }
+    key_preview_layout[layer][side][row][col].dataset.code =
+      new_key_layout[layer][side][row][col];
+    key_preview_layout[layer][side][row][col].textContent = (
+      key_layout[new_key_layout[layer][side][row][col]] || []
+    ).join(", ");
+  }
 }
 
-get_config_button.addEventListener("click", () => openPortThen(async ({ writer, reader }) => {
-    await writer.write(new Uint8Array([3]))
+link_device_button.addEventListener("click", async () => {
+  if (device === null) {
+    const filters = [{ usbVendorId: 0x2341, usbProductId: 0x8036 }];
+    const port = await navigator.serial.requestPort({ filters });
 
-    let buffer = new Uint8Array((await reader.read(new Uint8Array(1))).value.buffer)
+    await port.open({ baudRate: 115200 });
 
-    const fn_side = (buffer[0] & 0b01000000) >> 6;
-    const fn_row = (buffer[0] & 0b00111000) >> 3;
-    const fn_col = buffer[0] & 0b00000111;
+    const writer = port.writable.getWriter();
+    const reader = port.readable.getReader({ mode: "byob" });
 
-    await writer.write(new Uint8Array([1]))
-    await timeout(200)
+    device = { port, writer, reader };
 
-    buffer = new Uint8Array((await reader.read(new Uint8Array(168))).value.buffer)
+    get_config_button.disabled = false;
+    program_button.disabled = false;
+  } else {
+    device.writer.releaseLock();
+    device.reader.releaseLock();
 
-    for (const i in buffer) {
-        const { fn, side, row, col } = indexToIndexes(i)
+    await device.port.close();
 
-        if ((side == fn_side && row == fn_row && col == fn_col) || new_key_layout[fn][side][row][col] == FN_KEY) {
-            old_key_layout[0][side][row][col] = FN_KEY
-            old_key_layout[1][side][row][col] = FN_KEY
-            new_key_layout[0][side][row][col] = FN_KEY
-            new_key_layout[1][side][row][col] = FN_KEY
-        } else {
-            old_key_layout[fn][side][row][col] = buffer[i]
-            new_key_layout[fn][side][row][col] = buffer[i]
-        }
+    get_config_button.disabled = true;
+    program_button.disabled = true;
+
+    device = null;
+  }
+
+  link_device_button.classList.toggle("linked", device !== null);
+});
+
+get_config_button.addEventListener("click", async () => {
+  await device.writer.write(new Uint8Array([METHOD_GET_KEY_LAYOUT]));
+
+  const buffer = new Uint16Array(
+    (
+      await device.reader.read(new Uint16Array(ALL_LAYER_LEN), {
+        min: ALL_LAYER_LEN,
+      })
+    ).value.buffer,
+  );
+
+  for (const i in buffer) {
+    const { layer, side, row, col } = indexToIndexes(i);
+
+    old_key_layout[layer][side][row][col] = buffer[i];
+    new_key_layout[layer][side][row][col] = buffer[i];
+  }
+
+  updateKeyboardPreview();
+});
+
+program_button.addEventListener("click", async () => {
+  for (let i = 0; i < ALL_LAYER_LEN; i++) {
+    const { layer, side, row, col } = indexToIndexes(i);
+
+    if (
+      old_key_layout[layer][side][row][col] !=
+      new_key_layout[layer][side][row][col]
+    ) {
+      const buffer = new Uint8Array([
+        METHOD_SET_KEY,
+        layer & 0b00000111,
+        ((side & 0b00000001) << 6) +
+          ((row & 0b00000111) << 3) +
+          (col & 0b00000111),
+        (new_key_layout[layer][side][row][col] & 0xff00) >> 8,
+        new_key_layout[layer][side][row][col] & 0x00ff,
+      ]);
+      await device.writer.write(buffer);
+
+      old_key_layout[layer][side][row][col] =
+        new_key_layout[layer][side][row][col];
     }
 
-    updateKeyboardPreview()
-}))
+    program_button.children[0].value = i + 1;
+  }
 
-program_button.addEventListener("click", () => openPortThen(async ({ writer }) => {
-    for (let i = 0; i < 168; i++) {
-        const { fn, side, row, col } = indexToIndexes(i)
-
-        if (old_key_layout[fn][side][row][col] != new_key_layout[fn][side][row][col]) {
-            if (new_key_layout[fn][side][row][col] == FN_KEY)
-                await writer.write(new Uint8Array([4, ((side & 0b00000001) << 6) + ((row & 0b00000111) << 3) + (col & 0b00000111)]))
-            else
-                await writer.write(new Uint8Array([2, ((fn & 0b00000001) << 7) + ((side & 0b00000001) << 6) + ((row & 0b00000111) << 3) + (col & 0b00000111), new_key_layout[fn][side][row][col]]))
-
-            old_key_layout[fn][side][row][col] = new_key_layout[fn][side][row][col]
-        }
-
-        program_button.children[0].value = i + 1
-    }
-
-    await timeout(500)
-
-    program_button.children[0].value = 0
-}))
+  program_button.children[0].value = 0;
+});
 
 download_button.addEventListener("click", () => {
-    const link = document.createElement("a")
+  const link = document.createElement("a");
 
-    link.setAttribute("href", "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(new_key_layout)))
-    link.setAttribute("download", "keyboard-config.json")
+  link.setAttribute(
+    "href",
+    "data:application/json;charset=utf-8," +
+      encodeURIComponent(JSON.stringify(new_key_layout)),
+  );
+  link.setAttribute("download", "keyboard-config.json");
 
-    link.style.display = "none"
+  link.style.display = "none";
 
-    document.body.appendChild(link)
+  document.body.appendChild(link);
 
-    link.click()
+  link.click();
 
-    document.body.removeChild(link)
-})
+  document.body.removeChild(link);
+});
 
 upload_file.addEventListener("change", async () => {
-    const loaded_key_layout = JSON.parse(await upload_file.files[0].text())
+  const loaded_key_layout = JSON.parse(await upload_file.files[0].text());
 
-    for (let i = 0; i < 168; i++) {
-        const { fn, side, row, col } = indexToIndexes(i)
+  for (let i = 0; i < ALL_LAYER_LEN; i++) {
+    const { layer, side, row, col } = indexToIndexes(i);
 
-        new_key_layout[fn][side][row][col] = loaded_key_layout[fn][side][row][col]
-    }
+    new_key_layout[layer][side][row][col] =
+      loaded_key_layout[layer][side][row][col];
+  }
 
-    updateKeyboardPreview()
-})
+  updateKeyboardPreview();
+});
